@@ -19,6 +19,9 @@ import numpy as np
 import pandas as pd
 from collections import deque, defaultdict
 from typing import Dict, List, Optional, Tuple
+import requests
+import time
+from datetime import datetime
 
 class HybridHeatmapNoRebates:
     """
@@ -52,10 +55,20 @@ class HybridHeatmapNoRebates:
         self.entry_zones = (35, 65)  # Original bottom 35% / top 35%
         self.range_size_limits = (0.015, 0.6)  # Original valid range size
         
+        # Default to 50x leverage for DOGE trading
+        if self.leverage == 125:  # If still using default
+            self.leverage = 50
+        
         # Heatmap parameters
         self.price_history = deque(maxlen=250)  # Increased history for better analysis
         self.volume_history = deque(maxlen=250)
         self.tick_timestamps = deque(maxlen=250)
+        
+        # Coinglass integration
+        self.use_coinglass = True
+        self.coinglass_update_interval = 120  # 2 minutes
+        self.last_coinglass_update = 0
+        self.coinglass_heatmap_data = None
         
         # Liquidity analysis
         self.liquidity_zones = []
@@ -73,10 +86,12 @@ class HybridHeatmapNoRebates:
         self.position_entry_time = None
         self.position_entry_price = None
         
-        print("🔥 HYBRID HEATMAP STRATEGY - NO REBATES VERSION")
-        print("📊 Enhanced precision + optimized for fee environment")
-        print("⚡ 125x leverage with 18% position sizing")
-        print("💎 Targeting 96%+ win rate without maker rebates")
+        print("🔥 HYBRID HEATMAP STRATEGY - COINGLASS EDITION")
+        print("📊 Binance DOGE liquidation heatmap from Coinglass.com")
+        print("🔄 Heatmap updates every 2 minutes")
+        print(f"⚡ {self.leverage}x leverage with 18% position sizing")
+        print(f"💰 Starting Capital: ${self.initial_capital:.2f}")
+        print("💎 Targeting 96%+ win rate with real Binance liquidation zones")
         print("=" * 60)
     
     def add_tick(self, price: float, timestamp: float, volume: float = 0):
@@ -84,14 +99,152 @@ class HybridHeatmapNoRebates:
         self.price_history.append(price)
         self.volume_history.append(volume)
         self.tick_timestamps.append(timestamp)
-        
-        # Update heatmap analysis every 8 ticks (more frequent)
-        if len(self.price_history) % 8 == 0:
-            self.update_liquidity_heatmap()
-            self.update_market_bias()
+        print("price: "+price)
+        print("volume: "+volume)
+        print("timestamp: "+timestamp)        
+        # Update heatmap analysis
+        current_time = time.time()
+        if self.use_coinglass:
+            # Update from Coinglass every 2 minutes
+            if current_time - self.last_coinglass_update >= self.coinglass_update_interval:
+                self.fetch_coinglass_heatmap()
+                self.last_coinglass_update = current_time
+                self.update_market_bias()
+        else:
+            # Fallback to internal heatmap every 8 ticks
+            if len(self.price_history) % 8 == 0:
+                self.update_liquidity_heatmap()
+                self.update_market_bias()
         
         # Check for trading signals
         return self.analyze_trading_signal(price, timestamp)
+    
+    def fetch_coinglass_heatmap(self):
+        """Fetch real liquidation heatmap data from Coinglass (Binance DOGE)"""
+        try:
+            print("📊 Fetching Binance DOGE liquidation heatmap from Coinglass...")
+            
+            # Try Coinglass API endpoints - specifically for Binance DOGE
+            endpoints = [
+                {
+                    'url': 'https://open-api.coinglass.com/public/v2/liquidation_heatmap',
+                    'params': {'symbol': 'DOGE', 'ex': 'Binance'}
+                },
+                {
+                    'url': 'https://open-api.coinglass.com/public/v2/liquidation_chart',
+                    'params': {'symbol': 'DOGE', 'ex': 'Binance', 'time_type': 'h1'}
+                },
+                {
+                    'url': 'https://www.coinglass.com/api/futures/liquidation/chart',
+                    'params': {'symbol': 'DOGEUSDT', 'exchange': 'Binance'}
+                }
+            ]
+            
+            for endpoint in endpoints:
+                try:
+                    response = requests.get(
+                        endpoint['url'],
+                        params=endpoint['params'],
+                        headers={
+                            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+                        },
+                        timeout=10
+                    )
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        
+                        if data.get('success') and 'data' in data:
+                            self.coinglass_heatmap_data = data['data']
+                            self.process_coinglass_data(data['data'])
+                            print(f"✅ Binance DOGE heatmap updated: {len(data['data'])} liquidation zones")
+                            return
+                        elif isinstance(data, dict) and 'data' in data:
+                            # Alternative response format
+                            self.coinglass_heatmap_data = data['data']
+                            self.process_coinglass_data(data['data'])
+                            print(f"✅ Binance DOGE heatmap updated: {len(data['data'])} liquidation zones")
+                            return
+                        
+                except Exception as e:
+                    print(f"⚠️ Coinglass endpoint failed: {e}")
+                    continue
+            
+            # Fallback to internal heatmap if Coinglass fails
+            print("⚠️ Binance DOGE heatmap unavailable from Coinglass, using internal heatmap")
+            self.use_coinglass = False
+            self.update_liquidity_heatmap()
+            
+        except Exception as e:
+            print(f"❌ Error fetching Coinglass data: {e}")
+            self.use_coinglass = False
+            self.update_liquidity_heatmap()
+    
+    def process_coinglass_data(self, heatmap_data):
+        """Process Coinglass liquidation heatmap data into trading zones"""
+        try:
+            self.liquidity_zones = []
+            self.liquidation_clusters = []
+            
+            current_price = self.price_history[-1] if self.price_history else 0
+            
+            for zone in heatmap_data:
+                price = float(zone.get('price', 0))
+                long_liq = float(zone.get('longLiquidation', 0))
+                short_liq = float(zone.get('shortLiquidation', 0))
+                total_liq = long_liq + short_liq
+                
+                if price > 0 and total_liq > 0:
+                    # Add to liquidity zones
+                    self.liquidity_zones.append({
+                        'price': price,
+                        'volume': total_liq,
+                        'type': 'coinglass_liquidation'
+                    })
+                    
+                    # Identify liquidation clusters
+                    if price > current_price:
+                        # Long liquidation zone above current price
+                        self.liquidation_clusters.append({
+                            'price': price,
+                            'type': 'long_liquidation',
+                            'strength': long_liq / 1000000  # Normalize
+                        })
+                    else:
+                        # Short liquidation zone below current price
+                        self.liquidation_clusters.append({
+                            'price': price,
+                            'type': 'short_liquidation',
+                            'strength': short_liq / 1000000  # Normalize
+                        })
+            
+            # Sort by strength
+            self.liquidation_clusters.sort(key=lambda x: x['strength'], reverse=True)
+            
+            # Update support/resistance from Coinglass data
+            self.update_support_resistance_from_coinglass()
+            
+        except Exception as e:
+            print(f"❌ Error processing Coinglass data: {e}")
+    
+    def update_support_resistance_from_coinglass(self):
+        """Update support/resistance levels from Coinglass liquidation data"""
+        if not self.price_history or not self.liquidation_clusters:
+            return
+        
+        current_price = self.price_history[-1]
+        
+        # Support levels (short liquidations below current price)
+        self.support_levels = [
+            cluster['price'] for cluster in self.liquidation_clusters
+            if cluster['type'] == 'short_liquidation' and cluster['price'] < current_price
+        ][:5]  # Top 5 support levels
+        
+        # Resistance levels (long liquidations above current price)
+        self.resistance_levels = [
+            cluster['price'] for cluster in self.liquidation_clusters
+            if cluster['type'] == 'long_liquidation' and cluster['price'] > current_price
+        ][:5]  # Top 5 resistance levels
     
     def update_liquidity_heatmap(self):
         """Build liquidity heatmap from recent price/volume data"""

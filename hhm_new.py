@@ -22,7 +22,7 @@ from typing import Dict, List, Optional, Tuple
 import requests
 import time
 from datetime import datetime
-
+from trade_signals import DydxOrderClient as client
 class HybridHeatmapNoRebates:
     """
     Advanced DOGE futures strategy combining heatmap analysis with micro-range detection
@@ -85,6 +85,8 @@ class HybridHeatmapNoRebates:
         self.current_position = None
         self.position_entry_time = None
         self.position_entry_price = None
+        #dydx client
+        self.client=client()
         
         print("🔥 HYBRID HEATMAP STRATEGY - COINGLASS EDITION")
         print("📊 Binance DOGE liquidation heatmap from Coinglass.com")
@@ -548,6 +550,11 @@ class HybridHeatmapNoRebates:
         
         self.position_entry_time = signal['timestamp']
         self.position_entry_price = signal['entry_price']
+        self.client.place_limit_order(
+            side=self.current_position['side'],
+            size=self.current_position['adjusted_size'],
+            price=self.current_position['entry_price']
+        )
         
         print(f"🎯 {signal['action'].upper()} @ ${signal['entry_price']:.6f}")
         print(f"   Confidence: {signal['confidence']:.1%}")

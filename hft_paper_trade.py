@@ -9,6 +9,7 @@ import time
 import random
 from datetime import datetime
 from hybrid_heatmap_no_rebates import HybridHeatmapNoRebates
+from trade_signals import DydxOrderClient as client
 
 
 class HighFrequencyDemo:
@@ -27,6 +28,7 @@ class HighFrequencyDemo:
         self.last_status_time = 0
         self.base_price = None
         self.current_price = None
+        self.client=client()
         
     async def fetch_btc_price(self, session):
         """Fetch current BTC price"""
@@ -123,6 +125,7 @@ class HighFrequencyDemo:
             print(f"   Confidence: {confidence:.1f}%")
             print(f"   💎 POST-ONLY order (maker rebates)")
             print(f"{'='*80}")
+            self.client.place_limit_order(side=side.upper(), 
             
         elif action == 'CLOSE':
             reason = signal.get('reason', 'unknown')

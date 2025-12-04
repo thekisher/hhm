@@ -14,7 +14,7 @@ class DydxOrderClient:
         self,
         mnemonic: str= "still endorse use choose monkey equal jungle ketchup obscure put stumble eye minimum ritual follow neck rally coin funny sock broccoli bracket kite render",
         address: str="dydx1kydnehq9hfqqrt28jc2nhaxux33hk2sh9zw84q",
-        clob_pair_id: int,
+        clob_pair_id: NodeClient.get_clob_pair(pair_id=1)
         node_url: str = "grpc://oegs.dydx.trade:443",
         rest_indexer_url: str = "https://indexer.dydx.trade/v4",
         websocket_indexer_url: str = "wss://indexer.dydx.trade/v4/ws",

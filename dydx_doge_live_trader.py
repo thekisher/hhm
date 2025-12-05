@@ -94,11 +94,13 @@ class DydxDogeLiveTrader:
         # Wallet - initialize from mnemonic (requires node, mnemonic, address)
         self._wallet = await Wallet.from_mnemonic(self._node, self.private_key, derived_address)
         print(f"✅ Wallet initialized: {derived_address}")
-        
+
         # Indexer client
         self._indexer = IndexerClient(self.rest_indexer)
         print("✅ Indexer client connected")
-        
+        balances=self._indexer.get.get_account_balances(temp_wallet.address)
+        print(balances)
+        return
         # Initialize Market helper for DOGE-USD
         market_data = await self._indexer.markets.get_perpetual_markets("DOGE-USD")
         self.market_helper = Market(market_data["markets"]["DOGE-USD"])

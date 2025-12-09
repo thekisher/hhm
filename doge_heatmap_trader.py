@@ -10,7 +10,7 @@ Features
    - Detects micro ranges and emits long/short/close signals.
 3. Pipes signals into a dYdX live trader that places real orders using 50× leverage.
 """
-
+from params import trade_params
 import argparse
 import asyncio
 import json
@@ -30,6 +30,12 @@ import websockets
 # =============================================================================
 # WebSocket trade feed helpers (dYdX)
 # =============================================================================
+ticker=trade_params["market"]["ticker"]
+mnemonic=trade_params["mnemonic"]
+marketLeverage=trade_params["market"]["leverage"]
+symbol=trade_params["symbol"]
+market_name=trade_params["symbol"]
+name=trade_params['name']
 
 DYDX_WS_ENDPOINTS = {
     True: "wss://indexer.v4testnet.dydx.exchange/v4/ws",
@@ -42,8 +48,8 @@ def iso_to_timestamp(iso_str: str) -> float:
 
 
 async def dydx_trade_feed(
-    market: str = "DOGE-USD",
-    use_testnet: bool = True,
+    market: str = ticker,
+    use_testnet: bool = False,
     reconnect_delay: float = 5.0,
 ) -> AsyncGenerator[Tuple[float, float, float], None]:
     """Yield (price, timestamp, volume) tuples for every trade printed on dYdX v4."""
@@ -170,15 +176,15 @@ class HybridHeatmapNoRebates:
             endpoints = [
                 {
                     'url': 'https://open-api.coinglass.com/public/v2/liquidation_heatmap',
-                    'params': {'symbol': 'DOGE', 'ex': 'Binance'}
+                    'params': {'symbol': symbol, 'ex': 'Binance'}
                 },
                 {
                     'url': 'https://open-api.coinglass.com/public/v2/liquidation_chart',
-                    'params': {'symbol': 'DOGE', 'ex': 'Binance', 'time_type': 'h1'}
+                    'params': {'symbol': symbol, 'ex': 'Binance', 'time_type': 'h1'}
                 },
                 {
                     'url': 'https://www.coinglass.com/api/futures/liquidation/chart',
-                    'params': {'symbol': 'DOGEUSDT', 'exchange': 'Binance'}
+                    'params': {'symbol': symbol, 'exchange': 'Binance'}
                 }
             ]
 
@@ -196,7 +202,7 @@ class HybridHeatmapNoRebates:
                         if payload:
                             self.coinglass_heatmap_data = payload
                             self.process_coinglass_data(payload)
-                            print(f"✅ Binance DOGE heatmap updated: {len(payload)} zones")
+                            print(f"✅ Binance "+name+" heatmap updated: {len(payload)} zones")
                             return
                 except Exception as exc:
                     print(f"⚠️ Coinglass endpoint failed: {exc}")
@@ -609,7 +615,7 @@ class DydxLiveTrader:
 
     def __init__(
         self,
-        market: str = "DOGE-USD",
+        market: str = ticker,
         use_testnet: bool = True,
         leverage: float = 50.0
     ):
@@ -739,7 +745,7 @@ class DydxLiveTrader:
 
 
 async def run_live_bot(
-    market: str = "DOGE-USD",
+    market: str = ticker,
     leverage: float = 50.0,
     use_testnet_feed: bool = True,
     use_testnet_trader: bool = True,
@@ -770,7 +776,7 @@ async def run_live_bot(
     await asyncio.gather(signal_producer(), signal_consumer(), status_logger())
 
 
-def test_live_trader(market="DOGE-USD", use_testnet=True, leverage=50.0):
+def test_live_trader(market=ticker, use_testnet=False, leverage=marketLeverage):
     trader = DydxLiveTrader(market, use_testnet=use_testnet, leverage=leverage)
     test_signal = {'action': 'long', 'entry_price': 0.22000, 'confidence': 1.0}
     success = trader.execute_signal(test_signal)
@@ -785,7 +791,7 @@ def test_live_trader(market="DOGE-USD", use_testnet=True, leverage=50.0):
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run the DOGE Hybrid Heatmap dYdX live bot.")
-    parser.add_argument("--market", default="DOGE-USD", help="Market to trade (default DOGE-USD).")
+    parser.add_argument("--market", default=ticker, help="Market to trade (default "+ticker+").")
     parser.add_argument("--mainnet-feed", action="store_true", help="Use dYdX mainnet data feed.")
     parser.add_argument("--mainnet-trader", action="store_true", help="Send orders to dYdX mainnet.")
     parser.add_argument("--queue-size", type=int, default=500, help="Max pending signals.")

@@ -34,7 +34,6 @@ ticker=trade_params["market"]["ticker"]
 mnemonic=trade_params["mnemonic"]
 marketLeverage=trade_params["market"]["leverage"]
 symbol=trade_params["symbol"]
-market_name=trade_params["symbol"]
 name=trade_params['name']
 
 DYDX_WS_ENDPOINTS = {
@@ -617,7 +616,7 @@ class DydxLiveTrader:
         self,
         market: str = ticker,
         use_testnet: bool = False,
-        leverage: float = leverage
+        leverage: float = marketLeverage
     ):
         self.market = market
         self.use_testnet = use_testnet

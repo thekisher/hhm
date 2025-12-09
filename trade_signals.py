@@ -1,30 +1,31 @@
 import random
 from typing import Optional
-
+from dydx_v4_client.key_pair import KeyPair
 from dydx_v4_client.network import make_mainnet
 from dydx_v4_client.node.client import NodeClient
 from dydx_v4_client.indexer.rest.indexer_client import IndexerClient
-from dydx_v4_client.market import Market
 from dydx_v4_client.wallet import Wallet
-from dydx_v4_client.types import Order, OrderFlags, OrderType
-
+#from dydx_v4_client.types import Order, OrderFlags, OrderType
+from dydx_v4_client import OrderFlags
+from dydx_v4_client.indexer.rest.constants import OrderType
+from v4_proto.dydxprotocol.clob.order_pb2 import Order
 
 class DydxOrderClient:
     def __init__(
         self,
         mnemonic: str= "still endorse use choose monkey equal jungle ketchup obscure put stumble eye minimum ritual follow neck rally coin funny sock broccoli bracket kite render",
-        address: str="dydx1kydnehq9hfqqrt28jc2nhaxux33hk2sh9zw84q",
-        clob_pair_id: NodeClient.get_clob_pair(pair_id=1)
+        address: str="",
         node_url: str = "grpc://oegs.dydx.trade:443",
         rest_indexer_url: str = "https://indexer.dydx.trade/v4",
         websocket_indexer_url: str = "wss://indexer.dydx.trade/v4/ws",
-    ):
+        ):
         """
         Simple wrapper for placing limit orders on a single CLOB pair.
         """
         self.mnemonic = mnemonic
-        self.address = address
-        self.clob_pair_id = clob_pair_id
+        wallet = Wallet(KeyPair.from_mnemonic(self.mnemonic), 0,0)
+        self.address=wallet.address
+        self.clob_pair_id = None
 
         network = make_mainnet(
             node_url=node_url,
@@ -50,21 +51,28 @@ class DydxOrderClient:
         self._indexer = IndexerClient(self._network.rest_indexer)
 
         # Fetch market params for this CLOB pair
-        markets_resp = await self._indexer.markets.get_perpetual_markets(self.clob_pair_id)
-        self._market = Market(markets_resp["markets"][self.clob_pair_id])  # [[Place an order](https://docs.dydx.xyz/interaction/trading#place-an-order)]
+        markets_resp = await self._indexer.markets.get_perpetual_markets()
+        for market in markets_resp['markets']: 
+            if market['ticker']=="DOGE_USD":
+                clob_pair_id=market['clobPairId']
+                break
+            if not clob_pair_id: 
+                print('failure to load markets, you stuck up, dress shirt wearing, bitch.')
+                return
+        self._market = markets_resp["markets"][self.clob_pair_id]  # [[Place an order](https://docs.dydx.xyz/interaction/trading#place-an-order)]
 
-        # Wallet for signing
+        # Wallet for signing    
         self._wallet = await Wallet.from_mnemonic(self._node, self.mnemonic, self.address)  # [[Wallet setup](https://docs.dydx.xyz/interaction/wallet-setup#wallet-setup)]
 
     async def place_limit_order(
         self,
-        side: Order.Side,
+        side:  Order.Side,
         size: float,
         price: float,
         post_only: bool = False,
         reduce_only: bool = False,
         good_til_blocks_ahead: int = 10,
-    ) -> str:
+        ) -> str:
         """
         Build and place a short-term LIMIT order on the configured market.
         Returns tx hash.
@@ -76,7 +84,7 @@ class DydxOrderClient:
             self.address,
             0,  # subaccount index
             random.randint(0, 1_000_000_000),  # client_id
-            OrderFlags.SHORT_TERM,  # short-term order [[Place an order](https://docs.dydx.xyz/interaction/trading#identifying-the-order)]
+            OrderFlags.SHORT,  # short-term order [[Place an order](https://docs.dydx.xyz/interaction/trading#identifying-the-order)]
         )
 
         # Validity window

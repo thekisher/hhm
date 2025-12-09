@@ -712,7 +712,7 @@ class DydxLiveTrader:
             'price': price,
             'post_only': True
         })
-        hash=await dClient.place_limit_order(size=quantity, price=price, side='BUY', post_only=False)
+        hash=dClient.place_limit_order(size=quantity, price=price, side='BUY', post_only=False)
         print(hash)
         return True
 
@@ -726,7 +726,7 @@ class DydxLiveTrader:
             'price': price,
             'post_only': True
         })
-        hash=await dClient.place_limit_order(size=quantity, price=price, side='SELL', post_only=False)
+        hash=dClient.place_limit_order(size=quantity, price=price, side='SELL', post_only=False)
         print(hash)
         return True
 

@@ -34,7 +34,7 @@ import websockets
 ticker=trade_params["market"]["ticker"]
 mnemonic=trade_params["mnemonic"]
 marketLeverage=trade_params["market"]["leverage"]
-symbol=trade_params["symbol"]
+symbol=trade_params['market']["symbol"]
 name=trade_params['name']
 
 DYDX_WS_ENDPOINTS = {

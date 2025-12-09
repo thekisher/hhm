@@ -616,8 +616,8 @@ class DydxLiveTrader:
     def __init__(
         self,
         market: str = ticker,
-        use_testnet: bool = True,
-        leverage: float = 50.0
+        use_testnet: bool = False,
+        leverage: float = leverage
     ):
         self.market = market
         self.use_testnet = use_testnet

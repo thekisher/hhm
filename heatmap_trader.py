@@ -69,9 +69,10 @@ async def dydx_trade_feed(
                     if message.get("type") == "error":
                         print(f"[dYdX] ⚠️ Subscription error: {message}")
                         break
-                    if message.get("type") != "v4_trades":
+                    if message.get("channel") != "v4_trades":
                         continue
-
+                    if message.get("id")!=market:
+                        continue
                     for trade in message.get("contents", {}).get("trades", []):
                         try:
                             price = float(trade["price"])

@@ -711,6 +711,8 @@ class DydxLiveTrader:
             'price': price,
             'post_only': True
         })
+        hash=await dClient.place_limit_order(size=quantity, price=price, side='BUY', post_only=False)
+        print(hash)
         return True
 
     def _place_sell_order(self, quantity: float, price: float) -> bool:
@@ -723,6 +725,8 @@ class DydxLiveTrader:
             'price': price,
             'post_only': True
         })
+        hash=await dClient.place_limit_order(size=quantity, price=price, side='SELL', post_only=False)
+        print(hash)
         return True
 
     def _close_position(self, price: float) -> bool:

@@ -10,6 +10,7 @@ Features
    - Detects micro ranges and emits long/short/close signals.
 3. Pipes signals into a dYdX live trader that places real orders using 50× leverage.
 """
+from trade_signals import DydxOrderClient as dClient
 from params import trade_params
 import argparse
 import asyncio

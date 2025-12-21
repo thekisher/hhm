@@ -1,0 +1,10 @@
+Driver / logger: live_btc_test2.py (class LiveBTCTest, main())
+Strategy logic: hybrid_heatmap_no_rebates2.py (HybridHeatmapNoRebates)
+
+If you want to re‑run exactly what generated live_test_output.log:
+
+bash
+cd /Users/soniakish/CascadeProjects/windsurf-project
+python live_btc_test2.py
+
+Summary: the code for that log is the combination of live_btc_test2.py + hybrid_heatmap_no_rebates2.py.
